@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Upload Product — Artisan AI</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="fade-in">
+  <aside class="sidebar">
+    <h2>Artisan AI</h2>
+    <nav>
+      <a href="dashboard.html">🏠 Dashboard</a>
+      <a href="upload.html" style="background:rgba(255,122,0,0.06)">📦 Upload</a>
+      <a href="campaign.html">📢 Campaign</a>
+      <a href="analytics.html">📊 Analytics</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div class="container">
+      <h1 style="color:var(--purple)">Upload a new product</h1>
+
+      <div class="form-card" style="margin-top:18px">
+        <form id="uploadForm">
+          <label>Title</label><input id="name" class="input" />
+          <label style="margin-top:12px">Category</label><input id="category" class="input" />
+          <label style="margin-top:12px">Price (KES)</label><input id="price" class="input" type="number" />
+          <label style="margin-top:12px">Description</label><textarea id="description" class="input" rows="4"></textarea>
+          <label style="margin-top:12px">Image</label><input id="image" type="file" class="input" />
+          <div style="margin-top:14px;text-align:right">
+            <button class="btn" type="submit">Upload</button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+  </main>
+
+  
+<script type="module" src="js/auth.js"></script>
+<script type="module" src="js/api.js"></script>
+<script type="module" src="js/upload.js"></script>
+</body>
+</html>

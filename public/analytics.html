@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Analytics — Artisan AI</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="fade-in">
+  <aside class="sidebar">
+    <h2>Artisan AI</h2>
+    <nav>
+      <a href="dashboard.html">🏠 Dashboard</a>
+      <a href="upload.html">📦 Upload</a>
+      <a href="campaign.html">📢 Campaign</a>
+      <a href="analytics.html" style="background:rgba(255,122,0,0.06)">📊 Analytics</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div class="container">
+      <h1 style="color:var(--purple)">Analytics</h1>
+
+      <div class="grid grid-2" style="margin-top:16px">
+        <div class="card">
+          <h3>Impressions</h3>
+          <p class="small-muted">This month</p>
+          <p style="font-weight:800;margin-top:8px">4,320</p>
+        </div>
+
+        <div class="card">
+          <h3>Clicks</h3>
+          <p class="small-muted">This month</p>
+          <p style="font-weight:800;margin-top:8px">1,112</p>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:18px">
+        <h3>Engagement Over Time</h3>
+        <canvas id="chart" style="max-width:100%"></canvas>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/analytics.js"></script>
+</body>
+</html>

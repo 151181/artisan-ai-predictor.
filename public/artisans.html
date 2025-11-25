@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Artisan Dashboard — Artisan AI</title>
+    
+    <!-- Unified CSS styles -->
+    <style>
+        :root {
+            --purple: #6A0DAD; /* Primary color */
+            --orange: #FF7A00; /* Accent color */
+            --light-bg: #f7f7f7;
+            --muted: #666;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            display: flex;
+            background-color: var(--light-bg);
+            color: #333;
+            min-height: 100vh;
+        }
+
+        /* Layout */
+        .sidebar {
+            width: 240px;
+            background-color: white;
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+            flex-shrink: 0;
+        }
+        .main {
+            flex-grow: 1;
+            padding: 30px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Navigation */
+        .sidebar h2 {
+            color: var(--purple);
+            margin-top: 0;
+            margin-bottom: 24px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+        }
+        .sidebar nav a {
+            display: block;
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #333;
+            transition: background 0.2s;
+            font-weight: 500;
+        }
+        .sidebar nav a:hover {
+            background: rgba(255,122,0,0.1);
+        }
+
+        /* Components */
+        .card, .form-card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+        }
+        .form-card { padding: 30px; }
+        
+        /* Typography */
+        h1, h2, h3 { color: #333; }
+        .small-muted {
+            font-size: 14px;
+            color: var(--muted);
+        }
+        .hidden { display: none !important; }
+
+        /* Grid */
+        .grid {
+            display: grid;
+            gap: 20px;
+        }
+        .grid-2 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+        .grid-3 { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+        
+        /* Forms */
+        .input {
+            width: 100%;
+            padding: 10px 15px;
+            margin-top: 5px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+        .input:focus {
+            border-color: var(--orange);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(255, 122, 0, 0.2);
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        /* Buttons */
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: var(--orange);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+        .btn:hover {
+            background-color: #ff9133;
+        }
+        .btn:active {
+            transform: translateY(1px);
+        }
+        
+        /* Utility */
+        .center { text-align: center; }
+        .mt-4 { margin-top: 1rem; }
+    </style>
+    
+    <!-- Chart.js dependency is loaded here for Analytics view -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        // --- AUTH CHECK & INITIALIZATION ---
+        // NOTE: In a real environment, we'd use Firestore/Firebase Auth
+        const token = localStorage.getItem("authToken");
+        if (!token) window.location.href = "login.html";
+        
+        document.addEventListener("DOMContentLoaded", () => {
+            const usernameDisplay = document.getElementById("usernameDisplay");
+            const username = localStorage.getItem("username") || "Artisan";
+            if (usernameDisplay) usernameDisplay.textContent = username;
+            
+            // Initialize view and active link
+            showView('dashboard');
+            // Set initial active link style
+            const initialLink = document.getElementById('nav-dashboard');
+            if (initialLink) {
+                initialLink.style.background = 'rgba(255,122,0,0.06)';
+            }
+        });
+        
+        // --- SPA ROUTER & VIEW LOGIC ---
+        
+        // Function to draw the chart (called only when 'analytics' is viewed)
+        let engagementChart = null; // Store chart instance
+        function renderAnalyticsChart() {
+            const ctx = document.getElementById('chart');
+            if (!ctx) {
+                console.error("Chart canvas element not found.");
+                return;
+            }
+            
+            // Destroy existing chart before creating a new one to prevent conflicts
+            if (engagementChart) {
+                engagementChart.destroy();
+            }
+
+            engagementChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
+                    datasets: [
+                        {
+                            label: 'Impressions',
+                            data: [650, 590, 800, 810, 560, 550, 400],
+                            borderColor: 'rgba(106, 13, 173, 0.7)', // Purple
+                            backgroundColor: 'rgba(106, 13, 173, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 5
+                        },
+                        {
+                            label: 'Clicks',
+                            data: [200, 150, 300, 250, 180, 190, 150],
+                            borderColor: 'rgba(255, 122, 0, 0.7)', // Orange
+                            backgroundColor: 'rgba(255, 122, 0, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 5
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true }
+                    },
+                    plugins: {
+                        legend: { position: 'top' },
+                        title: { display: false }
+                    }
+                }
+            });
+        }
+
+        // Simple SPA Router function
+        function showView(viewName) {
+            const views = document.querySelectorAll('.content-view');
+            views.forEach(view => {
+                if (view.id === `view-${viewName}`) {
+                    view.classList.remove('hidden');
+                } else {
+                    view.classList.add('hidden');
+                }
+            });
+            
+            // Run view-specific initialization
+            if (viewName === 'analytics') {
+                renderAnalyticsChart();
+            }
+        }
+
+        // Function to handle link clicks and update active style
+        function handleNavClick(event, viewName) {
+            event.preventDefault(); // Stop the link from trying to load a new page
+            showView(viewName);
+
+            // Update active link style
+            document.querySelectorAll('.sidebar nav a').forEach(link => {
+                // Reset all link styles
+                link.style.background = 'transparent';
+            });
+            const activeLink = document.getElementById(`nav-${viewName}`);
+            if (activeLink) {
+                // Set style for the active link
+                activeLink.style.background = 'rgba(255,122,0,0.06)';
+            }
+        }
+    </script>
+</head>
+<body>
+    <aside class="sidebar">
+        <h2>Artisan AI</h2>
+        <nav>
+            <!-- All links now use the handleNavClick function and have IDs for styling -->
+            <a href="#" id="nav-dashboard" onclick="handleNavClick(event, 'dashboard')">🏠 Dashboard</a>
+            <a href="#" id="nav-upload" onclick="handleNavClick(event, 'upload')">📦 Upload</a>
+            <a href="#" id="nav-campaign" onclick="handleNavClick(event, 'campaign')">📢 Campaign</a>
+            <a href="#" id="nav-analytics" onclick="handleNavClick(event, 'analytics')">📊 Analytics</a>
+            <a href="#" id="logoutBtn">🚪 Logout</a>
+        </nav>
+    </aside>
+    
+    <main class="main">
+        <!-- MASTER CONTENT CONTAINER -->
+        <div id="content-display">
+            
+            <!-- === 1. DASHBOARD VIEW (Original Content) === -->
+            <div id="view-dashboard" class="content-view">
+                <div class="container">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:20px">
+                        <div>
+                            <h1 style="color:var(--purple)">Welcome, <span id="usernameDisplay"></span></h1>
+                            <p class="small-muted">Manage your shop and AI tools.</p>
+                        </div>
+                        <div><a class="btn" href="#" onclick="handleNavClick(event, 'upload')">New product</a></div>
+                    </div>
+
+                    <!-- Dashboard cards -->
+                    <section style="margin-top:22px">
+                        <div class="grid grid-3">
+                            <div class="card center"><h3>Total items</h3><p style="font-weight:700;margin-top:8px">24</p></div>
+                            <div class="card center"><h3>Active campaigns</h3><p style="font-weight:700;margin-top:8px">3</p></div>
+                            <div class="card center"><h3>Estimated revenue</h3><p style="font-weight:700;margin-top:8px">KES 52,600</p></div>
+                        </div>
+                    </section>
+
+                    <section style="margin-top:26px">
+                        <h2 style="margin-bottom:12px">Recommended (AI)</h2>
+                        <!-- Mock Recommendations -->
+                        <div id="recommendations" class="grid grid-3">
+                            <div class="card">
+                                <h4 style="color:var(--orange)">Optimize Description</h4>
+                                <p class="small-muted">Product 'Woven Basket' is missing cultural context. Generate a new AI description.</p>
+                                <a href="#" class="btn mt-4" style="background-color:var(--purple)">Review</a>
+                            </div>
+                            <div class="card">
+                                <h4 style="color:var(--orange)">Pricing Suggestion</h4>
+                                <p class="small-muted">Similar items sell for 10% more globally. Suggested price: KES 1,850.</p>
+                                <a href="#" class="btn mt-4" style="background-color:var(--purple)">Apply Price</a>
+                            </div>
+                            <div class="card">
+                                <h4 style="color:var(--orange)">New Campaign Idea</h4>
+                                <p class="small-muted">High demand for 'Textiles' in Europe. Create a campaign targeting Germany.</p>
+                                <a href="#" class="btn mt-4" onclick="handleNavClick(event, 'campaign')" style="background-color:var(--purple)">Start Campaign</a>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- === 2. UPLOAD VIEW (Integrated Content from upload.html) === -->
+            <div id="view-upload" class="content-view hidden">
+                <div class="container">
+                    <h1 style="color:var(--purple)">Upload a new product</h1>
+
+                    <div class="form-card" style="margin-top:18px">
+                        <form id="uploadForm">
+                            <label>Title</label><input id="name" class="input" />
+                            <label style="margin-top:12px">Category</label><input id="category" class="input" />
+                            <label style="margin-top:12px">Price (KES)</label><input id="price" class="input" type="number" />
+                            <label style="margin-top:12px">Description</label><textarea id="description" class="input" rows="4"></textarea>
+                            <label style="margin-top:12px">Image</label><input id="image" type="file" class="input" />
+                            <div style="margin-top:14px;text-align:right">
+                                <button class="btn" type="submit">Upload</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- === 3. CAMPAIGN VIEW (Integrated Content from campaign.html) === -->
+            <div id="view-campaign" class="content-view hidden">
+                <div class="container">
+                    <h1 style="color:var(--purple)">Campaign Management</h1>
+                    <p class="small-muted">Create and schedule new AI-optimized social media campaigns.</p>
+
+                    <div class="form-card" style="margin-top:18px">
+                        <form id="campaignForm">
+                            <label>Campaign Title</label><input id="title" class="input" />
+                            <label style="margin-top:12px">Product ID</label><input id="productId" class="input" />
+                            <label style="margin-top:12px">Caption (AI suggestion)</label><textarea id="caption" rows="3" class="input"></textarea>
+                            <label style="margin-top:12px">Schedule Date</label><input id="scheduleDate" type="date" class="input" />
+                            <div style="margin-top:14px;text-align:right"><button class="btn" type="submit">Create Campaign</button></div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- === 4. ANALYTICS VIEW (Integrated Content from analytics.html) === -->
+            <div id="view-analytics" class="content-view hidden">
+                <div class="container">
+                    <h1 style="color:var(--purple)">Sales Analytics</h1>
+
+                    <div class="grid grid-2" style="margin-top:16px">
+                        <div class="card">
+                            <h3>Impressions</h3>
+                            <p class="small-muted">This month</p>
+                            <p style="font-weight:800;margin-top:8px;font-size:24px">4,320</p>
+                        </div>
+
+                        <div class="card">
+                            <h3>Clicks</h3>
+                            <p class="small-muted">This month</p>
+                            <p style="font-weight:800;margin-top:8px;font-size:24px">1,112</p>
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin-top:18px">
+                        <h3>Engagement Over Time</h3>
+                        <!-- Chart will be rendered here by the JS function -->
+                        <canvas id="chart" style="max-height:300px; max-width:100%"></canvas>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+    
+    <script>
+        // --- LOGOUT HANDLER ---
+        document.getElementById('logoutBtn').addEventListener('click', (event) => {
+            event.preventDefault();
+            localStorage.removeItem("authToken");
+            localStorage.removeItem("username");
+            window.location.href = "login.html"; // Redirect to login page
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Campaigns — Artisan AI</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="fade-in">
+  <aside class="sidebar">
+    <h2>Artisan AI</h2>
+    <nav>
+      <a href="dashboard.html">🏠 Dashboard</a>
+      <a href="upload.html">📦 Upload</a>
+      <a href="campaign.html" style="background:rgba(255,122,0,0.06)">📢 Campaign</a>
+      <a href="analytics.html">📊 Analytics</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div class="container">
+      <h1 style="color:var(--purple)">Campaigns</h1>
+
+      <div class="form-card" style="margin-top:18px">
+        <form id="campaignForm">
+          <label>Campaign Title</label><input id="title" class="input" />
+          <label style="margin-top:12px">Product ID</label><input id="productId" class="input" />
+          <label style="margin-top:12px">Caption (AI suggestion)</label><textarea id="caption" rows="3" class="input"></textarea>
+          <label style="margin-top:12px">Schedule Date</label><input id="scheduleDate" type="date" class="input" />
+          <div style="margin-top:14px;text-align:right"><button class="btn" type="submit">Create Campaign</button></div>
+        </form>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="js/api.js"></script>
+  <script src="js/campaign.js"></script>
+</body>
+</html>

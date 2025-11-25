@@ -1,0 +1,111 @@
+:root{
+  --orange:#FF7A00;
+  --purple:#6A0DAD;
+  --light-bg:#FFF5E6;
+  --cream:#FFF2D9;
+  --text:#1A1A1A;
+}
+
+/* Basic reset */
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family: "Poppins", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  background: var(--light-bg);
+  color:var(--text);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  line-height:1.45;
+  background-image:
+    linear-gradient(135deg, rgba(106,13,173,0.03) 1px, transparent 1px),
+    linear-gradient(225deg, rgba(255,122,0,0.03) 1px, transparent 1px);
+  background-size:48px 48px;
+}
+
+/* Fade in */
+.fade-in{opacity:0;animation:fadeIn .9s ease .12s forwards}
+@keyframes fadeIn{to{opacity:1}}
+
+/* Buttons */
+.btn{display:inline-block;padding:.7rem 1.2rem;border-radius:10px;background:var(--orange);color:#fff;font-weight:700;text-decoration:none;transition:all .25s ease}
+.btn:hover{background:var(--purple);transform:translateY(-4px);box-shadow:0 10px 30px rgba(106,13,173,0.12)}
+
+/* Card */
+.card{background:var(--cream);border-radius:14px;padding:18px;box-shadow:0 6px 18px rgba(0,0,0,0.08);transition:all .25s ease}
+.card:hover{transform:translateY(-8px);box-shadow:0 14px 30px rgba(0,0,0,0.12)}
+
+/* Utility */
+.container{max-width:1200px;margin:0 auto;padding:28px}
+.grid{display:grid;gap:20px}
+.grid-3{grid-template-columns:repeat(3,1fr)}
+.grid-2{grid-template-columns:repeat(2,1fr)}
+.center{text-align:center}
+
+/* Header / Hero */
+.hero{
+  min-height:72vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:64px 20px;
+  position:relative;
+  overflow:hidden;
+}
+.hero .panel{
+  max-width:1100px;
+  width:100%;
+  display:flex;
+  gap:36px;
+  align-items:center;
+}
+.hero-left{flex:1}
+.hero-right{flex:1;display:flex;justify-content:center}
+.hero h1{font-size:48px;color:var(--purple);margin-bottom:14px}
+.hero p{font-size:18px;color: #3b3b3b;margin-bottom:22px}
+
+/* Spear decorations (SVG as background) */
+.spear-deco{
+  position:absolute;
+  right:-70px;
+  top:40px;
+  opacity:.08;
+  width:420px;
+  transform:rotate(8deg);
+  filter: drop-shadow(0 6px 10px rgba(0,0,0,0.08));
+}
+
+/* Sidebar (dashboard) */
+.sidebar{
+  width:240px;
+  background:linear-gradient(180deg,var(--purple),#4a0d80);
+  min-height:100vh;
+  color:white;
+  padding:28px 18px;
+  position:fixed;
+  left:0;top:0;
+}
+.sidebar h2{font-size:20px;margin-bottom:18px;text-align:center}
+.sidebar nav a{display:block;color:white;padding:12px;border-radius:10px;margin:8px 0;text-decoration:none;font-weight:600;transition:all .18s ease}
+.sidebar nav a:hover{background:var(--orange);transform:translateX(6px)}
+
+/* Main area */
+.main{margin-left:260px;padding:28px}
+
+/* Forms */
+.form-card{max-width:760px;margin:0 auto;background:linear-gradient(180deg,#fff,#fffdf7);padding:22px;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,0.07)}
+.input,textarea,select{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(0,0,0,0.08);margin-top:8px;outline:none;transition:box-shadow .18s ease}
+.input:focus,textarea:focus,select:focus{box-shadow:0 6px 18px rgba(255,122,0,0.12)}
+
+/* Tiny UI niceties */
+.kicker{display:inline-block;padding:6px 12px;background:rgba(106,13,173,0.08);color:var(--purple);border-radius:999px;font-weight:700;margin-bottom:12px}
+.small-muted{color:#666;font-size:14px}
+
+/* Responsive */
+@media (max-width:900px){
+  .hero{padding:40px 18px}
+  .hero h1{font-size:34px}
+  .panel{flex-direction:column;text-align:center}
+  .sidebar{position:relative;width:100%;min-height:auto;padding:18px}
+  .main{margin-left:0;padding:18px}
+  .grid-3{grid-template-columns:1fr}
+}

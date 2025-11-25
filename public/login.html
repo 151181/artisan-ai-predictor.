@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Login — Artisan AI</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="fade-in">
+  <div class="container" style="padding:60px 20px;max-width:900px">
+    <div style="display:flex;gap:30px;align-items:center;flex-wrap:wrap">
+      <div style="flex:1;min-width:320px">
+        <h2 style="color:var(--purple);font-size:28px;margin-bottom:12px">Welcome back</h2>
+        <p class="small-muted">Log in to manage your shop, upload products and view AI recommendations.</p>
+      </div>
+      <div style="flex:1;min-width:320px">
+        <div class="form-card">
+          <form id="loginForm" class="space-y-3">
+            <div><label>Email</label><input id="email" class="input" type="email" required /></div>
+            <div><label>Password</label><input id="password" class="input" type="password" required /></div>
+            <button class="btn" type="submit">Login</button>
+          </form>
+          <p style="margin-top:12px" class="small-muted">
+            No account? <a href="register.html" style="color:var(--purple);font-weight:700">Register</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="js/auth.js"></script>
+</body>
+</html>
