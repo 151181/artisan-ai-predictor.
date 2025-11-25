@@ -4,7 +4,8 @@ import numpy as np
 import pandas as pd
 from scipy.sparse import hstack
 
-# --- CONFIGURATION ---
+# --- CONFIGURATION (CORRECT PATHS) ---
+# All model assets are located in the SAME directory as app.py
 MODEL_PATH = 'best_gbr_model.joblib'
 SCALER_PATH = 'minmax_scaler.pkl'
 SELECTOR_PATH = 'feature_selector.pkl'
@@ -43,7 +44,9 @@ def load_assets():
         return model, scaler, selector, tfidf_vectorizer_desc, count_vectorizer_details, count_vectorizer_materials
     
     except FileNotFoundError as e:
-        st.error(f"Error: Required model asset not found: {e.filename}. Make sure all files are in the correct directory.")
+        # This error is usually fixed by pushing the files to GitHub
+        st.error(f"File Not Found Error: The app could not find required asset: {e.filename}. This means the file is missing from the deployed GitHub repository.")
+        st.caption("Please ensure you have committed and pushed all '.joblib' and '.pkl' files.")
         return None, None, None, None, None, None
     except Exception as e:
         st.error(f"An error occurred during asset loading: {e}")
@@ -84,8 +87,6 @@ if predict_button:
     
     # 1. Feature Encoding (Numerical/Categorical)
     
-    # Define the mapping used during model training
-    # IMPORTANT: These values must match the encoding used when the model was trained.
     market_segment_encoding = {
         "Luxury": 0,
         "Mid-Range": 1,
@@ -94,21 +95,20 @@ if predict_button:
     
     market_segment_encoded = market_segment_encoding.get(target_market, 1) # Default to Mid-Range if somehow missing
 
-    # **FIX:** Combine both numerical features into a 2D array for the scaler
-    # The scaler expects the shape (n_samples, n_features). We provide 1 sample and 2 features.
+    # Combine both numerical features into a 2D array for the scaler
     numerical_features = np.array([[production_time, market_segment_encoded]]) 
     
     # 2. Scaling Numerical Features
     try:
+        # minmax_scaler expects both numerical features (production_time and encoded market segment)
         scaled_numerical_features = minmax_scaler.transform(numerical_features)
     except Exception as e:
-        st.error(f"Scaling Error (Feature Count Mismatch): The scaler expected 2 features but received {numerical_features.shape[1]}. Please ensure the model assets are correct. Full error: {e}")
+        st.error(f"Scaling Error: An error occurred during feature scaling. Details: {e}")
         st.stop()
 
 
     # 3. Text Feature Vectorization
     
-    # Create pandas Series for vectorizers (they often expect this format)
     df_single = pd.DataFrame({
         'Product Description': [product_description],
         'Product Details/Features': [product_details],
@@ -121,10 +121,9 @@ if predict_button:
 
     # 4. Combining Features
     
-    # Convert scaled numerical features back to a sparse matrix for concatenation
     scaled_numerical_sparse = scaled_numerical_features
     
-    # Horizontally stack all features (Sparse Matrix + Sparse Matrix + Sparse Matrix + Dense Array)
+    # Horizontally stack all features
     all_features = hstack([
         scaled_numerical_sparse, 
         desc_features, 
@@ -147,5 +146,4 @@ if predict_button:
     st.success(f"Based on your inputs, the optimal selling price for your product is:")
     st.markdown(f"**<h1>{predicted_price:,.2f} USD</h1>**")
 
-    # Add a note about the market segment encoding used for clarity
     st.caption(f"*Market segment '{target_market}' was internally encoded as '{market_segment_encoded}'.*")
