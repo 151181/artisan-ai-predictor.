@@ -1,211 +1,146 @@
 import streamlit as st
-import pandas as pd
 import joblib
-import os
+import pandas as pd
 import numpy as np
-from scipy.sparse import hstack
-from sklearn.base import BaseEstimator, RegressorMixin
 
 # --- Configuration ---
-# File names are set to the clean versions confirmed to be working.
-ASSET_PATHS = {
-    'vectorizer_desc': 'tfidf_vectorizer_desc.pkl',
-    'vectorizer_materials': 'count_vectorizer_materials.pkl',
-    'vectorizer_details': 'count_vectorizer_details.pkl',
-    'scaler': 'minmax_scaler.pkl', 
-    'selector': 'feature_selector.pkl', 
-    'model': 'best_gbr_model.joblib' 
-}
+st.set_page_config(layout="wide", page_title="African Art Price Predictor")
 
-# Define the numerical features that the MinMax Scaler expects.
-# Based on the error (1059 expected features), we must assume only 3 of the
-# original 6 numerical features were used in the training pipeline before feature selection.
-NUM_FEATURES = [
-    'Store_Rating', 
-    'Totals_sales', 
-    'Product_Rating'
-    # The following 3 features are excluded to match the 1059 expected total features:
-    # 'listings', 'Description_len', 'Reviews'
-]
-
-# --- Asset Loading Function ---
-
+# --- Function to load all assets ---
 @st.cache_resource
 def load_assets():
-    """Loads all machine learning assets from the disk."""
-    st.info("Attempting to load machine learning assets...")
-    assets = {}
-    
-    # Get the directory where the script is running
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    missing_files = []
-
+    """Loads all machine learning assets (model, vectorizers, scaler, selector)"""
     try:
-        for key, filename in ASSET_PATHS.items():
-            file_path = os.path.join(script_dir, filename)
-            
-            if not os.path.exists(file_path):
-                missing_files.append(filename)
-                continue
-                
-            # Attempt to load the asset
-            try:
-                assets[key] = joblib.load(file_path)
-                st.success(f"Successfully loaded: {key} from {filename}")
-            except Exception as load_error:
-                # Catch specific loading errors for clearer debugging
-                st.error(f"FATAL LOAD ERROR for {filename} ({key}): File may be corrupted or created with a different scikit-learn version. Error: {load_error}")
-                st.stop()
-                
-        if missing_files:
-            st.error(f"Asset Loading Failed: The following required files were NOT found in the directory: {', '.join(missing_files)}. Please ensure these files are present.")
-            st.stop()
-            
-        st.success("All prediction assets loaded successfully!")
-        return assets
+        # Load Vectorizers
+        vectorizer_desc = joblib.load('tfidf_vectorizer_desc.pkl')
+        vectorizer_materials = joblib.load('count_vectorizer_materials.pkl')
+        vectorizer_details = joblib.load('count_vectorizer_details.pkl')
         
+        # Load Preprocessing Tools
+        scaler = joblib.load('minmax_scaler.pkl')
+        selector = joblib.load('feature_selector.pkl')
+        
+        # Load Model
+        model = joblib.load('best_gbr_model.joblib')
+        
+        st.success("All prediction assets loaded successfully!")
+        return vectorizer_desc, vectorizer_materials, vectorizer_details, scaler, selector, model
     except Exception as e:
-        st.error(f"General Asset Loading Setup Failure: {e}")
-        st.stop()
+        st.error(f"Failed to load machine learning assets. Please ensure all .pkl and .joblib files are in the repository: {e}")
+        return None, None, None, None, None, None
 
+# Load the assets
+vectorizer_desc, vectorizer_materials, vectorizer_details, scaler, selector, model = load_assets()
 
-# --- Main Application Logic ---
+if model is None:
+    st.stop() # Stop execution if assets failed to load
 
-# 1. Load the assets
-assets = load_assets()
+# --- Prediction Logic ---
+def predict_price(description, materials, details, store_rating, total_sales, product_rating, assets):
+    
+    vectorizer_desc, vectorizer_materials, vectorizer_details, scaler, selector, model = assets
 
-# 2. Extract components
-try:
-    tfidf_desc = assets['vectorizer_desc']
-    count_materials = assets['vectorizer_materials']
-    count_details = assets['vectorizer_details']
-    scaler = assets['scaler']
-    selector = assets['selector'] 
-    model = assets['model']
-except KeyError as e:
-    st.error(f"Critical Error: Required asset {e} is missing after successful loading. Cannot run prediction.")
-    st.stop()
+    # 1. Feature Engineering (Match training process)
+    # Convert inputs to DataFrame row for consistent processing
+    data = {
+        'Product_Description': [description],
+        'Materials_Used': [materials],
+        'Details': [details],
+        'Store_Rating': [store_rating],
+        'Total_Store_Sales': [total_sales],
+        'Product_Rating': [product_rating]
+    }
+    input_df = pd.DataFrame(data)
+    
+    # 2. Vectorize Text Features
+    X_desc = vectorizer_desc.transform(input_df['Product_Description'])
+    X_materials = vectorizer_materials.transform(input_df['Materials_Used'])
+    X_details = vectorizer_details.transform(input_df['Details'])
 
+    # 3. Combine Text and Numeric Features
+    # Note: Numeric columns must be scaled *after* vectorization
+    X_text = pd.concat([
+        pd.DataFrame(X_desc.toarray(), columns=[f'desc_{i}' for i in range(X_desc.shape[1])]),
+        pd.DataFrame(X_materials.toarray(), columns=[f'materials_{i}' for i in range(X_materials.shape[1])]),
+        pd.DataFrame(X_details.toarray(), columns=[f'details_{i}' for i in range(X_details.shape[1])])
+    ], axis=1)
 
-# --- Prediction Function ---
+    # 4. Handle Numeric Features
+    X_numeric = input_df[['Store_Rating', 'Total_Store_Sales', 'Product_Rating']].values
+    
+    # 5. Scale Numeric Features (MUST be done before combining)
+    X_numeric_scaled = scaler.transform(X_numeric)
+    X_numeric_scaled_df = pd.DataFrame(X_numeric_scaled, columns=['Store_Rating_scaled', 'Total_Store_Sales_scaled', 'Product_Rating_scaled'])
 
-def predict_price(user_input):
-    """
-    Preprocesses user input, predicts price, and reverses the scaling.
-    """
-    # 1. Create a DataFrame for consistent processing
-    data = pd.DataFrame(user_input, index=[0])
+    # Final Feature Matrix
+    X_final = pd.concat([X_text, X_numeric_scaled_df], axis=1)
 
-    # 2. Feature Engineering / Preprocessing
+    # 6. Apply Feature Selection (Critical step to match model input)
+    # We select features based on the selector mask saved during training
+    X_selected = X_final.iloc[:, selector.get_support()]
 
-    # Numerical Features 
-    # Only use the 3 numerical features confirmed to match the training data feature count (1059 total)
-    num_data = data[NUM_FEATURES].fillna(0).astype(float) 
-
-    # Text Features Vectorization
-    desc_vec = tfidf_desc.transform(data['Description'].fillna(''))
-    materials_vec = count_materials.transform(data['Materials'].fillna(''))
-    details_vec = count_details.transform(data['Details'].fillna(''))
-
-    # Combine all features (3 numerical + 1000 desc + 52 materials + 4 details = 1059 total features)
-    feature_matrix = hstack([
-        num_data.values,
-        desc_vec,
-        materials_vec,
-        details_vec
-    ])
-
-    # 3. Feature Selection (Using the loaded SelectFromModel)
-    selected_features = selector.transform(feature_matrix)
-
-    # 4. Predict the scaled price
-    scaled_prediction = model.predict(selected_features)
-
-    # 5. Inverse transform to get the real price (USD)
-    # The scaler expects a 2D array, so we reshape the prediction.
-    actual_prediction = scaler.inverse_transform(scaled_prediction.reshape(-1, 1))[0][0]
-
-    return actual_prediction
-
+    # 7. Prediction (Model expects log-transformed price, so we anti-log the result)
+    log_price_pred = model.predict(X_selected)[0]
+    
+    # Anti-log transform (assuming training used np.log1p)
+    predicted_price = np.expm1(log_price_pred) 
+    
+    return max(1.0, predicted_price) # Ensure price is at least $1.00
 
 # --- Streamlit UI ---
+st.title("🌍 African Art Price Predictor")
+st.markdown("Enter the details of your African Art piece to estimate its price in USD.")
 
-st.set_page_config(page_title="African Art Price Predictor", layout="centered")
-
-st.markdown("""
-    <style>
-    .stButton>button {
-        background-color: #A0522D; /* Sienna Brown */
-        color: white;
-        border-radius: 8px;
-        font-weight: bold;
-        padding: 10px 20px;
-        transition: all 0.2s;
-    }
-    .stButton>button:hover {
-        background-color: #8B4513; /* Saddle Brown */
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-    .main-header {
-        color: #8B4513;
-        font-size: 2.5em;
-        text-align: center;
-        margin-bottom: 20px;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-st.markdown("<h1 class='main-header'>🌍 African Art Price Predictor</h1>", unsafe_allow_html=True)
-st.write("Enter the details of your African Art piece to estimate its price in USD.")
-
-# --- Input Form ---
+# Using a form to group inputs and handle submission
 with st.form("price_prediction_form"):
-    st.subheader("Art Piece Description")
-    description = st.text_area("Product Description (e.g., 'Handmade tribal mask crafted from reclaimed wood')", "African Dog Collar broad - 51-54cm | Handmade Dog Collar | African Dog Collar | Bohemian Pet Collar | African Tribe Art")
-    materials = st.text_input("Materials Used (comma-separated, e.g., 'wood, acrylic paint, cotton')", "elephant grass, natural dyes")
-    details = st.selectbox("Details", ['Handmade', 'Digital', 'Download', 'No Information Provided'], index=0)
-
-    st.subheader("Seller & Store Metrics (Based on your shop's performance")
+    st.subheader("Art Piece Details")
     
-    # Organize inputs into two columns
-    col1, col2 = st.columns(2)
-    with col1:
-        store_rating = st.slider("Store Rating (0.0 to 5.0)", 0.0, 5.0, 4.9, 0.1)
-        total_sales = st.number_input("Total Store Sales", 0, 100000, 1010, step=100)
-        product_rating = st.slider("Product Rating (0.0 to 5.0)", 0.0, 5.0, 4.5, 0.1)
-        # These fields are included for user input but NOT used in prediction
-        st.caption("The following fields are for context but were excluded from the model to fix the feature count mismatch.")
-    with col2:
-        listings = st.number_input("Total Active Listings", 0, 5000, 31, step=10)
-        description_len = st.number_input("Description Word Count", 0, 5000, 163, step=10)
-        reviews = st.number_input("Total Reviews for this Product", 0, 1000, 5, step=1)
+    # Text Inputs
+    description = st.text_area("Product Description", placeholder="e.g., 'Handmade tribal mask crafted from reclaimed wood'", height=100)
+    materials = st.text_input("Materials Used (comma-separated)", placeholder="e.g., 'wood, acrylic paint, cotton'")
+    details = st.text_input("Details", placeholder="e.g., 'Handmade, Traditional, Vintage'")
 
-    submitted = st.form_submit_button("Predict Price")
+    st.subheader("Seller & Store Metrics")
+    
+    # Numeric Inputs (using sliders for easy input)
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        store_rating = st.slider("Store Rating (0.0 to 5.0)", min_value=0.0, max_value=5.0, value=4.5, step=0.1)
+
+    with col2:
+        # Use a number input for sales, as the range can be huge
+        total_sales = st.number_input("Total Store Sales", min_value=0, value=500, step=10)
+
+    with col3:
+        product_rating = st.slider("Product Rating (0.0 to 5.0)", min_value=0.0, max_value=5.0, value=4.8, step=0.1)
+
+    # Submission Button
+    submitted = st.form_submit_button("💰 Estimate Price in USD")
 
     if submitted:
-        # Prepare input data (Only the features required by the model)
-        user_input = {
-            'Description': description,
-            'Materials': materials,
-            'Details': details,
-            'Store_Rating': store_rating,
-            'Totals_sales': float(total_sales),
-            'Product_Rating': product_rating,
-            # We still need to pass these values to avoid KeyError when creating the DataFrame, 
-            # even though they will be filtered out by NUM_FEATURES later.
-            'listings': float(listings),
-            'Description_len': float(description_len),
-            'Reviews': float(reviews)
-        }
-
-        with st.spinner('Calculating estimated price...'):
-            try:
-                predicted_price = predict_price(user_input)
-                st.markdown(f"""
-                    <div style='background-color: #E6E0D4; padding: 20px; border-radius: 12px; text-align: center; border: 2px solid #8B4513;'>
-                        <p style='font-size: 1.2em; color: #333;'>The estimated price for this art piece is:</p>
-                        <h2 style='font-size: 3em; color: #8B4513;'>USD ${predicted_price:,.2f}</h2>
-                    </div>
-                """, unsafe_allow_html=True)
-            except Exception as e:
-                st.error(f"Prediction Error: The prediction failed. This often happens if the input features do not perfectly align with the features the model was trained on. Error details: {e}")
+        if not description or not materials:
+            st.error("Please fill in the Product Description and Materials Used fields.")
+        else:
+            # Pass all assets needed for the prediction pipeline
+            assets = (vectorizer_desc, vectorizer_materials, vectorizer_details, scaler, selector, model)
+            
+            # Run Prediction
+            with st.spinner('Calculating estimated price...'):
+                estimated_price = predict_price(
+                    description, materials, details, 
+                    store_rating, total_sales, product_rating, 
+                    assets
+                )
+            
+            # Display Result
+            st.success("✅ Prediction Complete")
+            st.markdown(f"""
+                <div style='background-color: #e6f7ff; padding: 20px; border-radius: 10px; border-left: 5px solid #007bff;'>
+                    <h3 style='margin-top: 0;'>Estimated Market Price</h3>
+                    <p style='font-size: 2.5em; color: #007bff; font-weight: bold;'>
+                        ${estimated_price:,.2f}
+                    </p>
+                    <p>Based on the current market trends and model analysis.</p>
+                </div>
+            """, unsafe_allow_html=True)
